@@ -17,11 +17,11 @@
         }
 
         .ticket-container {
-            width: 100%;
-            max-width: 300px;
+            width: 75mm; /* Ajustado para impresoras de 80mm (dejando margen de seguridad) */
             margin: 0 auto;
-            padding: 10px;
+            padding: 5px;
             text-align: center;
+            box-sizing: border-box;
         }
 
         .header {
@@ -79,8 +79,20 @@
             }
 
             @page {
+                size: 80mm auto;
                 margin: 0;
-                /* Quita márgenes del navegador para no cortar el rollo térmico */
+            }
+
+            body {
+                width: 80mm;
+                margin: 0;
+                padding: 0;
+            }
+
+            .ticket-container {
+                width: 75mm;
+                margin: 0;
+                padding: 2mm;
             }
         }
 
