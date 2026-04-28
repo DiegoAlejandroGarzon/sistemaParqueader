@@ -9,7 +9,12 @@ class VehicleType extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'icon', 'capacity'];
+    protected $fillable = ['name', 'icon', 'capacity', 'parking_id'];
+
+    public function parking()
+    {
+        return $this->belongsTo(Parking::class);
+    }
 
     public function rates()
     {

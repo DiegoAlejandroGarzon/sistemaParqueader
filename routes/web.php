@@ -14,6 +14,12 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    // Users Management
+    Route::resource('users', \App\Http\Controllers\UserController::class)->only(['index', 'store', 'update', 'destroy']);
+
+    // Parking Switching
+    Route::post('/active-parking', [\App\Http\Controllers\ActiveParkingController::class, 'update'])->name('active-parking.update');
+
     // Parking Routes
     Route::get('/parking', [\App\Http\Controllers\ParkingController::class, 'index'])->name('parking.index');
     Route::post('/parking/entry', [\App\Http\Controllers\ParkingController::class, 'entry'])->name('parking.entry');
@@ -25,6 +31,8 @@ Route::middleware('auth')->group(function () {
 
     // Settings Routes
     Route::prefix('settings')->name('settings.')->group(function () {
+        Route::resource('parkings', \App\Http\Controllers\Settings\ParkingManagerController::class)->except(['create', 'edit', 'show']);
+        Route::post('parkings/{parking}/assign-operators', [\App\Http\Controllers\Settings\ParkingManagerController::class, 'assignOperators'])->name('parkings.assign-operators');
         Route::resource('vehicle-types', \App\Http\Controllers\Settings\VehicleTypeController::class)->except(['create', 'edit', 'show']);
         Route::resource('rates', \App\Http\Controllers\Settings\RateController::class)->except(['create', 'edit', 'show']);
     });

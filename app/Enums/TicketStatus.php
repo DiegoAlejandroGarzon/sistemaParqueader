@@ -4,16 +4,16 @@ namespace App\Enums;
 
 enum TicketStatus: string
 {
-    case PENDING = 'PENDING';
-    case PAID = 'PAID';
-    case CANCELLED = 'CANCELLED';
+    case Open = 'OPEN';
+    case Paid = 'PAID';
+    case Cancelled = 'CANCELLED';
 
     public function label(): string
     {
         return match($this) {
-            self::PENDING => 'Pendiente',
-            self::PAID => 'Pagado',
-            self::CANCELLED => 'Cancelado',
+            self::Open => 'Pendiente',
+            self::Paid => 'Pagado',
+            self::Cancelled => 'Cancelado',
         };
     }
 }

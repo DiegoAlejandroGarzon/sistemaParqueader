@@ -15,28 +15,48 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('parking.index')" :active="request()->routeIs('parking.index')">
-                        {{ __('Parqueadero') }}
+
+                    @if(auth()->user()->role !== 'operator')
+                        <x-nav-link :href="route('users.index')" :active="request()->routeIs('users.*')">
+                            {{ __('Usuarios') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('settings.parkings.index')" :active="request()->routeIs('settings.parkings.*')">
+                            {{ __('Sedes') }}
+                        </x-nav-link>
+                    @endif
+
+                    <x-nav-link :href="route('parking.index')" :active="request()->routeIs('parking.*') && !request()->routeIs('parking.report')">
+                        {{ __('POS') }}
                     </x-nav-link>
+
                     <x-nav-link :href="route('parking.report')" :active="request()->routeIs('parking.report')">
                         {{ __('Cierre Caja') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('settings.vehicle-types.index')" :active="request()->routeIs('settings.vehicle-types.*')">
-                        {{ __('Vehículos') }}
-                    </x-nav-link>
-                    <x-nav-link :href="route('settings.rates.index')" :active="request()->routeIs('settings.rates.*')">
-                        {{ __('Tarifas') }}
-                    </x-nav-link>
+
+                    @if(session('active_parking_id'))
+                        <x-nav-link :href="route('settings.vehicle-types.index')" :active="request()->routeIs('settings.vehicle-types.*')">
+                            {{ __('Config. Vehículos') }}
+                        </x-nav-link>
+                        <x-nav-link :href="route('settings.rates.index')" :active="request()->routeIs('settings.rates.*')">
+                            {{ __('Tarifas') }}
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
-            <!-- Settings Dropdown -->
-            <div class="hidden sm:flex sm:items-center sm:ms-6">
+            <!-- Active Parking Indicator & Settings Dropdown -->
+            <div class="hidden sm:flex sm:items-center sm:ms-6 gap-4">
+                @if(session('active_parking_id'))
+                    <div class="flex items-center px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full text-xs font-bold border border-green-200 dark:border-green-800">
+                        <span class="mr-2">📍</span> {{ session('active_parking_name') }}
+                    </div>
+                @endif
+
                 <x-dropdown align="right" width="48">
                     <x-slot name="trigger">
                         <button
                             class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none transition ease-in-out duration-150">
-                            <div>{{ Auth::user()->name }}</div>
+                            <div>{{ Auth::user()->name }} <span class="text-[10px] opacity-50 uppercase">({{ Auth::user()->role }})</span></div>
 
                             <div class="ms-1">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg"
@@ -90,17 +110,18 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
+            
+            @if(auth()->user()->role !== 'operator')
+                <x-responsive-nav-link :href="route('users.index')" :active="request()->routeIs('users.index')">
+                    {{ __('Usuarios') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="route('settings.parkings.index')" :active="request()->routeIs('settings.parkings.index')">
+                    {{ __('Sedes') }}
+                </x-responsive-nav-link>
+            @endif
+
             <x-responsive-nav-link :href="route('parking.index')" :active="request()->routeIs('parking.index')">
-                {{ __('Parqueadero') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('parking.report')" :active="request()->routeIs('parking.report')">
-                {{ __('Cierre Caja') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('settings.vehicle-types.index')" :active="request()->routeIs('settings.vehicle-types.*')">
-                {{ __('Vehículos') }}
-            </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('settings.rates.index')" :active="request()->routeIs('settings.rates.*')">
-                {{ __('Tarifas') }}
+                {{ __('Punto de Venta') }}
             </x-responsive-nav-link>
         </div>
 

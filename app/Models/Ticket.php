@@ -18,7 +18,8 @@ class Ticket extends Model
         'total_amount',
         'status',
         'payment_method',
-        'user_id'
+        'user_id',
+        'parking_id'
     ];
 
     protected $casts = [
@@ -35,5 +36,10 @@ class Ticket extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function parking()
+    {
+        return $this->belongsTo(Parking::class);
     }
 }

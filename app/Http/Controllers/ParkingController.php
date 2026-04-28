@@ -2,82 +2,125 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Enums\TicketStatus;
+use App\Models\Parking;
+use App\Models\Rate;
 use App\Models\Ticket;
 use App\Models\VehicleType;
-use App\Repositories\TicketRepository;
-use App\Services\PriceCalculator;
-use App\Enums\TicketStatus;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ParkingController extends Controller
 {
-    protected $repository;
-    protected $calculator;
-
-    public function __construct(TicketRepository $repository, PriceCalculator $calculator)
+    private function getActiveParking()
     {
-        $this->repository = $repository;
-        $this->calculator = $calculator;
+        $parkingId = session('active_parking_id');
+        if (!$parkingId) {
+            return null;
+        }
+        return Parking::find($parkingId);
     }
 
     public function index()
     {
-        $tickets = $this->repository->getActiveTickets();
-        $vehicleTypes = VehicleType::withCount(['tickets' => function ($query) {
-            $query->where('status', TicketStatus::PENDING);
-        }])->get();
-
-        $recentPayments = Ticket::where('status', TicketStatus::PAID)
-            ->with('vehicleType')
-            ->orderBy('exit_at', 'desc')
-            ->take(10)
-            ->get();
+        $parking = $this->getActiveParking();
+        $user = auth()->user();
         
-        return view('parking.index', compact('tickets', 'vehicleTypes', 'recentPayments'));
+        if (!$parking) {
+            // Auto-selección si solo tiene acceso a un parqueadero
+            $availableParkings = collect();
+            if ($user->role === 'super-admin') {
+                $availableParkings = Parking::all();
+            } elseif ($user->role === 'admin') {
+                $availableParkings = Parking::where('admin_id', $user->id)->get();
+            } else {
+                $availableParkings = $user->parkings;
+            }
+
+            if ($availableParkings->count() === 1) {
+                $p = $availableParkings->first();
+                session(['active_parking_id' => $p->id, 'active_parking_name' => $p->name]);
+                return redirect()->route('parking.index');
+            }
+
+            return redirect()->route('settings.parkings.index')->with('error', 'Por favor selecciona una sede para trabajar.');
+        }
+
+        $vehicleTypes = VehicleType::where('parking_id', $parking->id)
+            ->withCount(['tickets' => function($query) {
+                $query->where('status', TicketStatus::Open);
+            }])
+            ->get();
+
+        $tickets = Ticket::where('parking_id', $parking->id)
+            ->where('status', TicketStatus::Open)
+            ->with(['vehicleType', 'user'])
+            ->latest()
+            ->get();
+
+        $recentPayments = Ticket::where('parking_id', $parking->id)
+            ->where('status', TicketStatus::Paid)
+            ->whereDate('exit_at', Carbon::today())
+            ->latest('exit_at')
+            ->take(5)
+            ->get();
+
+        return view('parking.index', compact('vehicleTypes', 'tickets', 'recentPayments'));
     }
 
     public function entry(Request $request)
     {
+        $parking = $this->getActiveParking();
+        if (!$parking) return back()->with('error', 'No hay parqueadero activo.');
+
         $request->validate([
             'plate' => 'required|string|max:10',
             'vehicle_type_id' => 'required|exists:vehicle_types,id',
             'entry_at' => 'nullable|date',
         ]);
 
-        // Check if there is already an active ticket for this plate
-        $activeTicket = $this->repository->findActiveTicketByPlate(strtoupper($request->plate));
-        if ($activeTicket) {
-            return back()->with('error', 'El vehículo ya se encuentra en el parqueadero.');
+        // Check capacity
+        $type = VehicleType::findOrFail($request->vehicle_type_id);
+        $activeCount = Ticket::where('parking_id', $parking->id)
+            ->where('vehicle_type_id', $type->id)
+            ->where('status', TicketStatus::Open)
+            ->count();
+
+        if ($activeCount >= $type->capacity) {
+            return back()->with('error', 'Capacidad máxima alcanzada para este tipo de vehículo.');
         }
 
-        Ticket::create([
+        $ticket = Ticket::create([
             'plate' => strtoupper($request->plate),
             'vehicle_type_id' => $request->vehicle_type_id,
-            'entry_at' => $request->filled('entry_at') ? Carbon::parse($request->entry_at) : Carbon::now(),
-            'status' => TicketStatus::PENDING,
-            'user_id' => Auth::id(),
+            'entry_at' => $request->entry_at ? Carbon::parse($request->entry_at) : now(),
+            'status' => TicketStatus::Open,
+            'user_id' => auth()->id(),
+            'parking_id' => $parking->id,
         ]);
 
-        return back()->with('success', 'Ingreso registrado correctamente.');
+        return redirect()->route('parking.receipt', $ticket)->with('success', 'Vehículo ingresado.');
     }
 
     public function checkoutPreview(Ticket $ticket)
     {
-        if ($ticket->status !== TicketStatus::PENDING) {
-            return response()->json(['error' => 'Ticket no válido o ya pagado.'], 400);
+        if ($ticket->status !== TicketStatus::Open) {
+            return response()->json(['error' => 'Este tiquete ya fue procesado.'], 400);
         }
 
-        $exitAt = Carbon::now();
-        // Cargar la relación para obtener la tarifa
-        $rate = $ticket->vehicleType->rates()->first(); // Asumiendo una tarifa activa (se podría refinar)
+        $exitAt = now();
+        $durationInMinutes = $ticket->entry_at->diffInMinutes($exitAt);
         
+        $rate = Rate::where('parking_id', $ticket->parking_id)
+            ->where('vehicle_type_id', $ticket->vehicle_type_id)
+            ->first();
+
         if (!$rate) {
-            return response()->json(['error' => 'No hay tarifa configurada para este vehículo.'], 400);
+            return response()->json(['error' => 'No hay tarifas configuradas para este vehículo en este parqueadero.'], 400);
         }
 
-        $amount = $this->calculator->calculate($ticket->entry_at, $exitAt, $rate);
+        $total = $this->calculateTotal($durationInMinutes, $rate);
 
         return response()->json([
             'id' => $ticket->id,
@@ -85,40 +128,50 @@ class ParkingController extends Controller
             'entry_at' => $ticket->entry_at->format('d/m/Y h:i A'),
             'exit_at' => $exitAt->format('d/m/Y h:i A'),
             'time' => $ticket->entry_at->diffForHumans($exitAt, true),
-            'amount' => $amount,
+            'amount' => number_format($total, 0),
         ]);
+    }
+
+    private function calculateTotal($minutes, $rate)
+    {
+        if ($minutes <= 0) return 0;
+        
+        $hours = floor($minutes / 60);
+        $remainingMinutes = $minutes % 60;
+        
+        $total = $hours * $rate->price_per_hour;
+        
+        if ($remainingMinutes > 0) {
+            $total += $rate->fraction_price;
+        }
+
+        return $total;
     }
 
     public function pay(Request $request, Ticket $ticket)
     {
-        if ($ticket->status !== TicketStatus::PENDING) {
-            return back()->with('error', 'Ticket ya pagado o cancelado.');
-        }
+        $exitAt = now();
+        $durationInMinutes = $ticket->entry_at->diffInMinutes($exitAt);
+        $rate = Rate::where('parking_id', $ticket->parking_id)
+            ->where('vehicle_type_id', $ticket->vehicle_type_id)
+            ->first();
 
-        $exitAt = Carbon::now();
-        $rate = $ticket->vehicleType->rates()->first();
-        
-        $amount = $this->calculator->calculate($ticket->entry_at, $exitAt, $rate);
+        $total = $this->calculateTotal($durationInMinutes, $rate);
 
         $ticket->update([
             'exit_at' => $exitAt,
-            'total_amount' => $amount,
-            'status' => TicketStatus::PAID,
+            'total_amount' => $total,
             'payment_method' => $request->payment_method ?? 'Efectivo',
+            'status' => TicketStatus::Paid,
         ]);
 
-        // Redirigir al recibo
-        return redirect()->route('parking.receipt', $ticket->id);
+        return redirect()->route('parking.receipt', $ticket)->with('success', 'Pago registrado exitosamente.');
     }
 
     public function cancel(Ticket $ticket)
     {
-        if ($ticket->status !== TicketStatus::PENDING) {
-            return back()->with('error', 'Solo se pueden anular tiquetes pendientes.');
-        }
-
-        $ticket->update(['status' => TicketStatus::CANCELLED]);
-        return back()->with('success', 'Tiquete anulado correctamente.');
+        $ticket->update(['status' => TicketStatus::Cancelled]);
+        return back()->with('success', 'Tiquete anulado.');
     }
 
     public function receipt(Ticket $ticket)
@@ -128,7 +181,17 @@ class ParkingController extends Controller
 
     public function report()
     {
-        $reportData = $this->repository->getDailyReport();
+        $parking = $this->getActiveParking();
+        if (!$parking) return redirect()->route('settings.parkings.index');
+
+        $reportData = Ticket::where('parking_id', $parking->id)
+            ->where('status', TicketStatus::Paid)
+            ->whereDate('exit_at', Carbon::today())
+            ->with('user')
+            ->select('user_id', DB::raw('count(*) as total_tickets'), DB::raw('sum(total_amount) as total_recaudado'))
+            ->groupBy('user_id')
+            ->get();
+
         return view('parking.report', compact('reportData'));
     }
 }

@@ -11,40 +11,50 @@ class RateController extends Controller
 {
     public function index()
     {
-        $rates = Rate::with('vehicleType')->get();
-        $vehicleTypes = VehicleType::all();
+        $parkingId = session('active_parking_id');
+        if (!$parkingId) return redirect()->route('settings.parkings.index')->with('error', 'Selecciona un parqueadero.');
+
+        $rates = Rate::where('parking_id', $parkingId)->with('vehicleType')->get();
+        $vehicleTypes = VehicleType::where('parking_id', $parkingId)->get();
+        
         return view('settings.rates.index', compact('rates', 'vehicleTypes'));
     }
 
     public function store(Request $request)
     {
+        $parkingId = session('active_parking_id');
+
         $request->validate([
             'vehicle_type_id' => 'required|exists:vehicle_types,id',
             'price_per_hour' => 'required|numeric|min:0',
-            'fraction_price' => 'nullable|numeric|min:0',
+            'fraction_price' => 'required|numeric|min:0',
         ]);
 
-        Rate::create($request->all());
+        Rate::create([
+            'vehicle_type_id' => $request->vehicle_type_id,
+            'price_per_hour' => $request->price_per_hour,
+            'fraction_price' => $request->fraction_price,
+            'parking_id' => $parkingId,
+        ]);
 
-        return back()->with('success', 'Tarifa configurada correctamente.');
+        return redirect()->route('settings.rates.index')->with('success', 'Tarifa creada.');
     }
 
     public function update(Request $request, Rate $rate)
     {
         $request->validate([
-            'vehicle_type_id' => 'required|exists:vehicle_types,id',
             'price_per_hour' => 'required|numeric|min:0',
-            'fraction_price' => 'nullable|numeric|min:0',
+            'fraction_price' => 'required|numeric|min:0',
         ]);
 
-        $rate->update($request->all());
+        $rate->update($request->only(['price_per_hour', 'fraction_price']));
 
-        return back()->with('success', 'Tarifa actualizada.');
+        return redirect()->route('settings.rates.index')->with('success', 'Tarifa actualizada.');
     }
 
     public function destroy(Rate $rate)
     {
         $rate->delete();
-        return back()->with('success', 'Tarifa eliminada.');
+        return redirect()->route('settings.rates.index')->with('success', 'Tarifa eliminada.');
     }
 }

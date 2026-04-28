@@ -9,10 +9,15 @@ class Rate extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['vehicle_type_id', 'price_per_hour', 'fraction_price'];
+    protected $fillable = ['vehicle_type_id', 'price_per_hour', 'fraction_price', 'parking_id'];
 
     public function vehicleType()
     {
         return $this->belongsTo(VehicleType::class);
+    }
+
+    public function parking()
+    {
+        return $this->belongsTo(Parking::class);
     }
 }

@@ -23,6 +23,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'max_parkings',
+        'created_by',
     ];
 
     /**
@@ -46,5 +48,25 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function parkings()
+    {
+        return $this->belongsToMany(Parking::class);
+    }
+
+    public function ownedParkings()
+    {
+        return $this->hasMany(Parking::class, 'admin_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function operators()
+    {
+        return $this->hasMany(User::class, 'created_by');
     }
 }

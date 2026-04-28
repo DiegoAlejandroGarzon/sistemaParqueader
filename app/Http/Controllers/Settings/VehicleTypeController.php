@@ -10,43 +10,49 @@ class VehicleTypeController extends Controller
 {
     public function index()
     {
-        $vehicleTypes = VehicleType::all();
+        $parkingId = session('active_parking_id');
+        if (!$parkingId) return redirect()->route('settings.parkings.index')->with('error', 'Selecciona un parqueadero.');
+
+        $vehicleTypes = VehicleType::where('parking_id', $parkingId)->get();
         return view('settings.vehicle-types.index', compact('vehicleTypes'));
     }
 
     public function store(Request $request)
     {
+        $parkingId = session('active_parking_id');
+        
         $request->validate([
-            'name' => 'required|string|unique:vehicle_types,name',
-            'icon' => 'nullable|string|max:5',
-            'capacity' => 'required|integer|min:0',
+            'name' => 'required|string|max:255',
+            'icon' => 'required|string|max:10',
+            'capacity' => 'required|integer|min:1',
         ]);
 
-        VehicleType::create($request->all());
+        VehicleType::create([
+            'name' => $request->name,
+            'icon' => $request->icon,
+            'capacity' => $request->capacity,
+            'parking_id' => $parkingId,
+        ]);
 
-        return back()->with('success', 'Tipo de vehículo creado correctamente.');
+        return redirect()->route('settings.vehicle-types.index')->with('success', 'Tipo de vehículo creado.');
     }
 
     public function update(Request $request, VehicleType $vehicleType)
     {
         $request->validate([
-            'name' => 'required|string|unique:vehicle_types,name,' . $vehicleType->id,
-            'icon' => 'nullable|string|max:5',
-            'capacity' => 'required|integer|min:0',
+            'name' => 'required|string|max:255',
+            'icon' => 'required|string|max:10',
+            'capacity' => 'required|integer|min:1',
         ]);
 
-        $vehicleType->update($request->all());
+        $vehicleType->update($request->only(['name', 'icon', 'capacity']));
 
-        return back()->with('success', 'Tipo de vehículo actualizado.');
+        return redirect()->route('settings.vehicle-types.index')->with('success', 'Tipo de vehículo actualizado.');
     }
 
     public function destroy(VehicleType $vehicleType)
     {
-        if ($vehicleType->rates()->count() > 0) {
-            return back()->with('error', 'No se puede eliminar porque tiene tarifas asociadas.');
-        }
-
         $vehicleType->delete();
-        return back()->with('success', 'Tipo de vehículo eliminado.');
+        return redirect()->route('settings.vehicle-types.index')->with('success', 'Tipo de vehículo eliminado.');
     }
 }
