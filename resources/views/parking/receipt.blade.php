@@ -6,70 +6,111 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recibo - {{ $ticket->plate }}</title>
     <style>
-        /* Estilos optimizados para impresora térmica de 58/80mm */
+        /* Estilos optimizados para impresora térmica de 80mm */
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: 'Tahoma', 'Verdana', 'Segoe UI', Arial, sans-serif;
             margin: 0;
             padding: 0;
             width: 100%;
-            /* El ancho lo ajusta el navegador al papel, pero se puede fijar a 58mm (ej width: 220px;) */
             color: #000;
+            -webkit-font-smoothing: none;
+            /* Intentar obtener bordes más nítidos en impresión */
         }
 
         .ticket-container {
-            width: 75mm; /* Ajustado para impresoras de 80mm (dejando margen de seguridad) */
+            width: 75mm;
             margin: 0 auto;
             padding: 5px;
             text-align: center;
             box-sizing: border-box;
+            font-size: 15px;
+            /* Aumentado ligeramente */
         }
 
-        .header {
-            font-weight: bold;
-            font-size: 1.2em;
-            margin-bottom: 5px;
-        }
-
-        .subheader {
-            font-size: 0.9em;
-            margin-bottom: 10px;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 5px;
-        }
-
-        .details {
-            text-align: left;
-            font-size: 0.9em;
-            margin-bottom: 15px;
-            border-bottom: 1px dashed #000;
-            padding-bottom: 10px;
-        }
-
-        .details-row {
+        .header-logos {
             display: flex;
-            justify-content: space-between;
-            margin-bottom: 3px;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 8px;
         }
 
-        .plate-container {
-            margin: 10px 0;
+        .header-logos span {
+            font-size: 40px;
+            font-weight: bold;
+        }
+
+        .header-text {
+            font-weight: bold;
+            font-size: 1.15em;
+            margin-bottom: 12px;
+            line-height: 1.1;
+        }
+
+        .header-text p {
+            margin: 1px 0;
+        }
+
+        .ticket-info {
             font-size: 1.5em;
             font-weight: bold;
-            border: 2px solid #000;
-            padding: 5px;
+            margin: 12px 0;
+            line-height: 1.1;
+            border-top: 1px dashed #000;
+            border-bottom: 1px dashed #000;
+            padding: 5px 0;
         }
 
-        .total-container {
-            font-size: 1.2em;
-            font-weight: bold;
+        .barcode-container {
+            margin: 15px 0;
+            text-align: center;
+        }
+
+        .barcode-container svg {
+            width: 85%;
+            height: 50px;
+        }
+
+        .details-table {
+            width: 100%;
+            text-align: left;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        .details-table td {
+            padding: 3px 0;
+        }
+
+        .details-table .label {
+            width: 35%;
+            font-weight: normal;
+        }
+
+        .details-table .value {
             text-align: right;
-            margin-top: 10px;
+            font-weight: bold;
         }
 
         .footer {
-            font-size: 0.8em;
+            font-size: 1.0em;
+            /* Aumentado para mayor legibilidad */
             text-align: center;
-            margin-top: 20px;
+            margin-top: 15px;
+            line-height: 1.2;
+        }
+
+        .footer p {
+            margin: 2px 0;
+        }
+
+        .terms {
+            font-size: 0.85em;
+            /* Aumentado significativamente */
+            text-align: justify;
+            margin-top: 10px;
+            line-height: 1.1;
+            font-weight: normal;
         }
 
         /* Ocultar elementos en la impresión que no sirven */
@@ -121,44 +162,64 @@
 
 <body>
     <div class="ticket-container">
-        <div class="header">PARQUEADERO MVP</div>
-        <div class="subheader">
-            Nit: 123456789-0<br>
-            Dirección: Calle 123 #45-67<br>
-            Fecha Impresión: {{ \Carbon\Carbon::now()->format('d/m/Y h:i:s A') }}
+        <!-- Logos Superiores -->
+        <div class="header-logos">
+            <span>🅿️</span>
+            <span>🚗</span>
+            <span>🏍️</span>
         </div>
 
-        <div class="plate-container">
-            {{ $ticket->plate }} <br>
-            <span style="font-size: 0.5em; font-weight: normal;">{{ $ticket->vehicleType->name }}</span>
+        <div class="header-text">
+            <p>PARQUEADERO LA 12</p>
+            <p>NIT: 14231632 -7</p>
+            <p>NO RESPONSABLE DE IVA</p>
+            <p>CRA 2 # 11-92</p>
+            <p>TELEFONO: 276 1700</p>
+            <p>HORARIO:</p>
+            <p>LUN A SAB: 7:00 AM a 9:00 PM</p>
+            <p>DOM y FEST: 9:00 AM a 7:00 PM</p>
         </div>
 
-        <div class="details">
-            <div class="details-row">
-                <span>Ingreso:</span>
-                <span>{{ $ticket->entry_at->format('d/m/Y h:i A') }}</span>
-            </div>
-            <div class="details-row">
-                <span>Salida:</span>
-                <span>{{ $ticket->exit_at ? $ticket->exit_at->format('d/m/Y h:i A') : 'N/A' }}</span>
-            </div>
-            <div class="details-row">
-                <span>Tiempo:</span>
-                <span>{{ $ticket->exit_at ? $ticket->entry_at->diffForHumans($ticket->exit_at, true) : '-' }}</span>
-            </div>
-            <div class="details-row">
-                <span>Atendido por:</span>
-                <span>{{ $ticket->user->name ?? 'Operario' }}</span>
-            </div>
+        <div class="ticket-info">
+            <p style="margin:0;">Recibo No: {{ number_format($ticket->id, 0, ',', '.') }}</p>
+            <p style="margin:0;">Placa: {{ strtoupper($ticket->plate) }}</p>
         </div>
 
-        <div class="total-container">
-            TOTAL: ${{ number_format($ticket->total_amount, 2) }}
+        <div class="barcode-container">
+            @php
+                $generator = new \Picqer\Barcode\BarcodeGeneratorSVG();
+                echo $generator->getBarcode($ticket->id, $generator::TYPE_CODE_128, 2, 50, 'black');
+            @endphp
         </div>
+
+        <table class="details-table">
+            <tr>
+                <td class="label">Tarifa:</td>
+                <td class="value">{{ strtoupper($ticket->vehicleType->name) }} X HORA</td>
+            </tr>
+            <tr>
+                <td class="label">Entrada:</td>
+                <td class="value">
+                    {{ strtoupper($ticket->entry_at->locale('es')->isoFormat('hh:mm A YYYY-MM-DD ddd')) }}</td>
+            </tr>
+            <tr>
+                <td class="label">Cajero:</td>
+                <td class="value">{{ strtoupper($ticket->user->name ?? 'SISTEMA') }}</td>
+            </tr>
+        </table>
 
         <div class="footer">
-            ¡Gracias por preferirnos!<br>
-            Vuelva pronto.
+            <p style="font-weight: bold;">POLIZA # 1-250006862 SEGUROS MUNDIAL</p>
+            <p style="font-weight: bold;">RECLAMACIONES: TEL: 285 5600</p>
+            <p style="font-weight: bold; margin-top:5px;">REGLAMENTO</p>
+            <div class="terms">
+                El vehículo se entregará al portador del recibo. * No aceptamos ordenes telefónicas ni escritas. *
+                Retirado el vehículo, no aceptamos ningún tipo de reclamo. * No respondemos por objetos dejados en el
+                vehiculo. * No respondemos por la perdida, deterioro o daños ocurridos como consecuencia de incendio,
+                terremoto, asonada, revolución, u otras causas similares. * El conductor debe asegurarse que el vehículo
+                esta bien asegurado. * No respondemos por daños al vehículo causados por terceros.
+            </div>
+            <p style="margin-top: 10px;">www.softluciones.co</p>
         </div>
     </div>
 
@@ -168,7 +229,7 @@
         <a href="{{ route('parking.index') }}" class="btn btn-back">⬅️ Volver al Inicio</a>
     </div>
 
-    <!-- Auto imprimir al cargar (opcional, para agilizar) -->
+    <!-- Auto imprimir al cargar -->
     <script>
         window.onload = function() {
             window.print();

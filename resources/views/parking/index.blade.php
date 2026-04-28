@@ -126,7 +126,7 @@
                             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                                 @forelse($tickets as $ticket)
                                     <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                        x-show="searchTerm === '' || '{{ $ticket->plate }}'.includes(searchTerm)">
+                                        x-show="searchTerm === '' || '{{ $ticket->plate }}'.includes(searchTerm) || '{{ $ticket->id }}' === searchTerm">
                                         <td class="px-6 py-4">
                                             <span
                                                 class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-md font-mono font-bold text-lg">
