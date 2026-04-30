@@ -66,7 +66,9 @@ class ParkingController extends Controller
             ->take(5)
             ->get();
 
-        return view('parking.index', compact('vehicleTypes', 'tickets', 'recentPayments'));
+        $rates = Rate::where('parking_id', $parking->id)->get();
+
+        return view('parking.index', compact('vehicleTypes', 'tickets', 'recentPayments', 'rates'));
     }
 
     public function entry(Request $request)

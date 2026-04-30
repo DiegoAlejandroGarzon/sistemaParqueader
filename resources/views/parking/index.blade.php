@@ -119,6 +119,7 @@
                                     <th class="px-6 py-4">Placa</th>
                                     <th class="px-6 py-4 uppercase">Tipo</th>
                                     <th class="px-6 py-4 uppercase">Ingreso</th>
+                                    <th class="px-6 py-4 uppercase">Cobro Actual</th>
                                     <th class="px-6 py-4 uppercase">Operario</th>
                                     <th class="px-6 py-4 text-center">Acciones</th>
                                 </tr>
@@ -143,8 +144,14 @@
                                         <td class="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">
                                             {{ $ticket->entry_at->format('d/m/Y h:i A') }}
                                             <br>
-                                            <span
-                                                class="text-xs opacity-60">({{ $ticket->entry_at->diffForHumans() }})</span>
+                                            <span class="text-xs opacity-60">
+                                                (<span x-text="formatTimeDiff('{{ $ticket->entry_at->toIso8601String() }}')"></span>)
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span class="text-lg font-bold text-green-600 dark:text-green-400">
+                                                $<span x-text="formatNumber(calculateLiveFee('{{ $ticket->entry_at->toIso8601String() }}', {{ $ticket->vehicle_type_id }}))"></span>
+                                            </span>
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-500">
                                             {{ $ticket->user->name }}
@@ -335,10 +342,15 @@
                     isCapLow: false,
                     availableSpaces: 0,
                     totalSpaces: 0,
+                    rates: @json($rates),
+                    now: new Date(),
 
                     init() {
                         this.updateClock();
-                        setInterval(() => this.updateClock(), 1000);
+                        setInterval(() => {
+                            this.updateClock();
+                            this.now = new Date();
+                        }, 1000);
                         // Check initial capacity
                         this.checkCapacity(document.getElementById('vehicle_type_id').value);
 
@@ -430,6 +442,46 @@
                     },
                     closeCheckoutModal() {
                         this.showCheckoutModal = false;
+                    },
+
+                    calculateLiveFee(entryAt, typeId) {
+                        const rate = this.rates.find(r => r.vehicle_type_id == typeId);
+                        if (!rate) return 0;
+
+                        const start = new Date(entryAt);
+                        const diffMs = this.now - start;
+                        const diffMins = Math.floor(diffMs / 60000);
+
+                        if (diffMins <= 0) return 0;
+
+                        const hours = Math.floor(diffMins / 60);
+                        const remainingMinutes = diffMins % 60;
+
+                        let total = hours * rate.price_per_hour;
+                        if (remainingMinutes > 0) {
+                            total += parseFloat(rate.fraction_price);
+                        }
+
+                        return total;
+                    },
+
+                    formatNumber(value) {
+                        return new Intl.NumberFormat('es-CO').format(value);
+                    },
+
+                    formatTimeDiff(entryAt) {
+                        const start = new Date(entryAt);
+                        const diffMs = this.now - start;
+                        const diffMins = Math.floor(diffMs / 60000);
+
+                        if (diffMins < 1) return 'hace unos segundos';
+                        if (diffMins < 60) return `hace ${diffMins} ${diffMins === 1 ? 'minuto' : 'minutos'}`;
+
+                        const diffHours = Math.floor(diffMins / 60);
+                        if (diffHours < 24) return `hace ${diffHours} ${diffHours === 1 ? 'hora' : 'horas'}`;
+
+                        const diffDays = Math.floor(diffHours / 24);
+                        return `hace ${diffDays} ${diffDays === 1 ? 'día' : 'días'}`;
                     }
                 }
             }
