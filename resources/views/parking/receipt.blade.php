@@ -206,6 +206,12 @@
                 <td class="label">Cajero:</td>
                 <td class="value">{{ strtoupper($ticket->user->name ?? 'SISTEMA') }}</td>
             </tr>
+            @if($ticket->notes)
+            <tr>
+                <td class="label">Notas:</td>
+                <td class="value" style="font-size: 0.9em;">{{ strtoupper($ticket->notes) }}</td>
+            </tr>
+            @endif
         </table>
 
         <div class="footer">

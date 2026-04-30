@@ -19,7 +19,8 @@ class Ticket extends Model
         'status',
         'payment_method',
         'user_id',
-        'parking_id'
+        'parking_id',
+        'notes'
     ];
 
     protected $casts = [

@@ -90,6 +90,14 @@
                             </p>
                         </div>
 
+                        <div class="mt-4">
+                            <x-input-label for="notes" :value="__('Notas / Observaciones')" />
+                            <textarea id="notes" name="notes" rows="2"
+                                class="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm text-sm"
+                                placeholder="Ej: Deja casco, rayón en puerta..."></textarea>
+                            <x-input-error class="mt-2" :messages="$errors->get('notes')" />
+                        </div>
+
                         <div class="mt-6">
                             <x-primary-button class="w-full justify-center py-3 text-lg">
                                 {{ __('Registrar Ingreso') }}
@@ -133,6 +141,11 @@
                                                 class="px-3 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-md font-mono font-bold text-lg">
                                                 {{ $ticket->plate }}
                                             </span>
+                                            @if($ticket->notes)
+                                                <p class="text-[10px] text-gray-500 italic mt-1 max-w-[150px] truncate" title="{{ $ticket->notes }}">
+                                                    📝 {{ $ticket->notes }}
+                                                </p>
+                                            @endif
                                         </td>
                                         <td class="px-6 py-4">
                                             <div class="flex items-center">

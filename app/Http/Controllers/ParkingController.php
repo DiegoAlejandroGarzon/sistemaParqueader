@@ -80,6 +80,7 @@ class ParkingController extends Controller
             'plate' => 'required|string|max:10',
             'vehicle_type_id' => 'required|exists:vehicle_types,id',
             'entry_at' => 'nullable|date',
+            'notes' => 'nullable|string|max:500',
         ]);
 
         // Check capacity
@@ -100,6 +101,7 @@ class ParkingController extends Controller
             'status' => TicketStatus::Open,
             'user_id' => auth()->id(),
             'parking_id' => $parking->id,
+            'notes' => $request->notes,
         ]);
 
         return redirect()->route('parking.receipt', $ticket)->with('success', 'Vehículo ingresado.');
