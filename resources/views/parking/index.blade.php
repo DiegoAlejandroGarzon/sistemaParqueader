@@ -341,6 +341,27 @@
                         setInterval(() => this.updateClock(), 1000);
                         // Check initial capacity
                         this.checkCapacity(document.getElementById('vehicle_type_id').value);
+
+                        // Global focus for plate input
+                        window.addEventListener('keydown', (e) => {
+                            // If modal is open, don't redirect
+                            if (this.showCheckoutModal) return;
+
+                            const tags = ['INPUT', 'TEXTAREA', 'SELECT'];
+                            if (tags.includes(document.activeElement.tagName)) return;
+
+                            // Ignore modifier keys
+                            if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+                            // Only redirect if it's a single character (alphanumeric, etc)
+                            // and not special keys like Enter, Tab, etc.
+                            if (e.key.length === 1) {
+                                const plateInput = document.getElementById('plate');
+                                if (plateInput) {
+                                    plateInput.focus();
+                                }
+                            }
+                        });
                     },
 
                     checkCapacity(typeId) {
